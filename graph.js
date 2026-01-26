@@ -525,7 +525,7 @@ export function drawGraph() {
           backgroundColor: 'transparent'
         },
         {
-          label: 'APC (Prev 3×/wk)',
+          label: 'APC, Current 3×/wk',
           data: Array(10081).fill(apcold),
           borderColor: 'rgb(232, 173, 96)',
           borderWidth: 1.5,
@@ -537,7 +537,7 @@ export function drawGraph() {
           backgroundColor: 'transparent'
         },
         {
-          label: 'TAC (Prev 3×/wk)',
+          label: 'TAC, Current 3×/wk',
           data: Array(10081).fill(tacold),
           borderColor: 'rgb(232, 173, 96)',
           borderWidth: 1.5,
@@ -549,7 +549,7 @@ export function drawGraph() {
           backgroundColor: 'transparent'
         },
         {
-          label: 'APC (New 3×/wk)',
+          label: 'APC, New 3×/wk',
           data: Array(10081).fill(apc),
           borderColor: 'rgba(75,192,192,1)',
           borderWidth: 1.5,
@@ -561,7 +561,7 @@ export function drawGraph() {
           backgroundColor: 'transparent'
         },
         {
-          label: 'TAC (New 3×/wk)',
+          label: 'TAC, New 3×/wk',
           data: Array(10081).fill(tac),
           borderColor: 'rgba(75,192,192,1)',
           borderWidth: 1.5,
@@ -573,7 +573,7 @@ export function drawGraph() {
           backgroundColor: 'transparent'
         },
         {
-          label: 'APC (New 2×/wk)',
+          label: 'APC, New 2×/wk',
           data: Array(10081).fill(apc2),
           borderColor: 'rgba(153,102,255,1)',
           borderWidth: 1.5,
@@ -585,7 +585,7 @@ export function drawGraph() {
           backgroundColor: 'transparent'
         },
         {
-          label: 'TAC (New 2×/wk)',
+          label: 'TAC, New 2×/wk',
           data: Array(10081).fill(tac2),
           borderColor: 'rgba(153,102,255,1)',
           borderWidth: 1.5,
@@ -731,7 +731,8 @@ export function drawGraph() {
       // Build HTML for each column
       legendContainer.innerHTML = groups.map(group =>
         `<ul>` + group.map(item =>
-          `<li data-ds-index="${item.index}" style="opacity:${item.hidden ? 0.5 : 1}">
+          `<li data-ds-index="${item.index}">
+            <input type="checkbox" ${item.hidden ? '' : 'checked'} style="margin-right: 5px;">
             <span style="background:${item.color};border:1px solid ${item.color}"></span>
             ${item.label}
           </li>`

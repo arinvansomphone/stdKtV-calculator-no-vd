@@ -92,14 +92,16 @@ export function calculateTwice() {
 
     let UF_factor = 1 / (1 - (0.74 * weeklyuf) / (2 * ureaVolume));
     let KruAdd = (10080 * kru) / (ureaVolume * 1000);
+    let stdKtV_Leypoldt = 0; // Declare outside loop
+    let stdKtV_trial = 0; // Declare outside loop to save final value
 
     let difference = 1;
     while (difference > 0.001 * stdKtV_target) {
         spKtV_prime = (Keff * (t_prime + 30)) / (ureaVolume * 1000);
         let eKtV_prime = (spKtV_prime * t_prime) / (t_prime + 30);
         let a = 1 - Math.exp(-eKtV_prime);
-        let stdKtV_Leypoldt = (10080 * a / t_prime) / (a / eKtV_prime + (10080 / (2 * t_prime)) - 1);
-        let stdKtV_trial = UF_factor * stdKtV_Leypoldt + KruAdd;
+        stdKtV_Leypoldt = (10080 * a / t_prime) / (a / eKtV_prime + (10080 / (2 * t_prime)) - 1);
+        stdKtV_trial = UF_factor * stdKtV_Leypoldt + KruAdd;
         difference = Math.abs(stdKtV_trial - stdKtV_target);
 
         // adjust time for next iteration
@@ -116,6 +118,7 @@ export function calculateTwice() {
     let weightGainPerDay = weeklyuf / 7;
     let weightAccumulation = weightGainPerDay * 4 * 1000;
     let removalRate = weightAccumulation / (t_target / 60 * weight);
+    let newstdKtVTwiceValue = stdKtV_trial; // Use the converged value
     let timeOutputTwice = document.getElementById("timeOutputTwice");
     if (timeOutputTwice) {
         timeOutputTwice.textContent = `${t_target}` + " min";
@@ -129,6 +132,10 @@ export function calculateTwice() {
     let newspKtVTwice = document.getElementById("newspKtVTwice");
     if (newspKtVTwice) {
         newspKtVTwice.textContent = `${spKtV_prime.toFixed(2)}`;
+    }
+    let newstdKtVTwice = document.getElementById("newstdKtVTwice");
+    if (newstdKtVTwice) {
+        newstdKtVTwice.textContent = `${newstdKtVTwiceValue.toFixed(2)}`;
     }
 
     if (removalRate < 13) {
@@ -163,14 +170,16 @@ export function calculateThrice() {
 
     let UF_factor = 1 / (1 - (0.74 * weeklyuf) / (3 * ureaVolume));
     let KruAdd = (10080 * kru) / (ureaVolume * 1000);
+    let stdKtV_Leypoldt = 0; // Declare outside loop
+    let stdKtV_trial = 0; // Declare outside loop to save final value
 
     let difference = 1;
     while (difference > 0.001 * stdKtV_target) {
         spKtV_prime = (Keff * (t_prime + 30)) / (ureaVolume * 1000);
         let eKtV_prime = (spKtV_prime * t_prime) / (t_prime + 30);
         let a = 1 - Math.exp(-eKtV_prime);
-        let stdKtV_Leypoldt = (10080 * a / t_prime) / (a / eKtV_prime + (10080 / (3 * t_prime)) - 1);
-        let stdKtV_trial = UF_factor * stdKtV_Leypoldt + KruAdd;
+        stdKtV_Leypoldt = (10080 * a / t_prime) / (a / eKtV_prime + (10080 / (3 * t_prime)) - 1);
+        stdKtV_trial = UF_factor * stdKtV_Leypoldt + KruAdd;
         difference = Math.abs(stdKtV_trial - stdKtV_target);
 
         // adjust time for next iteration
@@ -187,6 +196,7 @@ export function calculateThrice() {
     let weightGainPerDay = weeklyuf / 7;
     let weightAccumulation = weightGainPerDay * 3 * 1000;
     let removalRate = weightAccumulation / (t_target / 60 * weight);
+    let newstdKtVThriceValue = stdKtV_trial; // Use the converged value
     let timeOutputThrice = document.getElementById("timeOutputThrice");
     if (timeOutputThrice) {
         timeOutputThrice.textContent = `${t_target}` + " min";
@@ -200,6 +210,10 @@ export function calculateThrice() {
     let newspKtVThrice = document.getElementById("newspKtVThrice");
     if (newspKtVThrice) {
         newspKtVThrice.textContent = `${spKtV_prime.toFixed(2)}`;
+    }
+    let newstdKtVThrice = document.getElementById("newstdKtVThrice");
+    if (newstdKtVThrice) {
+        newstdKtVThrice.textContent = `${newstdKtVThriceValue.toFixed(2)}`;
     }
     if (removalRate < 13) {
         let UF_WarningThrice = document.getElementById("UF_WarningThrice");
@@ -224,12 +238,28 @@ document.querySelectorAll('input[name="isestimate"]').forEach(i => i.addEventLis
 const form = document.getElementById('dialysisForm');
 let activeChart = null;
 
+function calculateKd() {
+    const spKtV = getNumberValue("spKtV_current");
+    const time = getNumberValue("time");
+    const Kru = getNumberValue("kru");
+    const Vtotal = calculateVolumeOfPatient() * 1000; // Convert L to mL
+
+    if (Vtotal > 0 && time > 0) {
+        const Kd = (spKtV * Vtotal / time) - Kru;
+        const kdOutput = document.getElementById("kdOutput");
+        if (kdOutput) {
+            kdOutput.textContent = `${Kd.toFixed(1)} mL/min`;
+        }
+    }
+}
+
 form.addEventListener('submit', async (e) => {
     e.preventDefault();          // stop page refresh
 
     calculateVolumeOfPatient();  // refresh derived inputs
     calculateTwice();
     calculateThrice();
+    calculateKd();               // calculate and display Kd
 
     if (activeChart) { activeChart.destroy(); }
 
@@ -308,6 +338,288 @@ genderInputs.forEach(input => {
     input.addEventListener('change', calculateVolumeOfPatient);
 });
 
+/* ─────────── CALCULATE STDKT/V BUTTON VALIDATION ─────────── */
+function checkCalcStdKtVInputs() {
+    const calcButton = document.getElementById('calculateStdKtV');
+    if (!calcButton) return;
+
+    const calcInputs = [
+        'calc_ureaVolume',
+        'calc_dialysisTime',
+        'calc_spKtV',
+        'calc_weeklyUF',
+        'calc_treatmentsPerWeek'
+    ];
+
+    const allFilled = calcInputs.every(id => {
+        const input = document.getElementById(id);
+        return input && input.value && input.value.trim() !== '';
+    });
+
+    calcButton.disabled = !allFilled;
+}
+
+// Add event listeners to all Calculate stdKt/V inputs
+const calcInputIds = ['calc_ureaVolume', 'calc_dialysisTime', 'calc_spKtV', 'calc_weeklyUF', 'calc_treatmentsPerWeek'];
+calcInputIds.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', checkCalcStdKtVInputs);
+    }
+});
+
+/* ─────────── CALCULATE STDKT/V BUTTON HANDLER ─────────── */
+function calculateNewStdKtV() {
+    // Get input values
+    const spKtV = parseFloat(document.getElementById('calc_spKtV').value);
+    const time = parseFloat(document.getElementById('calc_dialysisTime').value);
+    const ureaVolume = parseFloat(document.getElementById('calc_ureaVolume').value);
+    const weeklyuf = parseFloat(document.getElementById('calc_weeklyUF').value);
+    const treatmentsPerWeek = parseFloat(document.getElementById('calc_treatmentsPerWeek').value);
+
+    // Calculate ektv_prime = spktv * (time) / (time + 30)
+    const ektv_prime = spKtV * (time) / (time + 30);
+    const a = 1 - Math.exp(-ektv_prime);
+
+    // Calculate UF_factor
+    const UF_factor = 1 / (1 - (0.74 * weeklyuf) / (treatmentsPerWeek * ureaVolume));
+
+    // Get kru from the main form
+    const kru = parseFloat(document.getElementById('kru').value) || 0;
+
+    // Calculate KruAdd
+    const KruAdd = (10080 * kru) / (ureaVolume * 1000);
+
+    // Calculate stdKtV_Leypoldt
+    const stdKtV_Leypoldt = (10080 * a / time) / (a / ektv_prime + (10080 / (treatmentsPerWeek * time)) - 1);
+
+    // Calculate stdKtV_trial
+    const stdKtV_trial = UF_factor * stdKtV_Leypoldt + KruAdd;
+
+    // Display the result
+    const outputElement = document.getElementById('newStdKtVOutput');
+    if (outputElement) {
+        outputElement.textContent = stdKtV_trial.toFixed(2);
+    }
+
+    return stdKtV_trial;
+}
+
+// Add event listener to the calculate button
+const calculateStdKtVButton = document.getElementById('calculateStdKtV');
+if (calculateStdKtVButton) {
+    calculateStdKtVButton.addEventListener('click', calculateNewStdKtV);
+}
+
+/* ─────────── INITIAL EMPTY CHART ─────────── */
+function createEmptyChart() {
+    const canvas = document.getElementById('myLineChart');
+    const ctx = canvas.getContext('2d');
+
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const emptyData = {
+        labels: Array.from({ length: 10081 }, (_, i) => i),
+        datasets: [
+            {
+                label: 'Current 3×/wk',
+                data: [],
+                fill: false,
+                tension: 0.1,
+                borderColor: 'rgb(232, 173, 96)',
+                borderWidth: 1,
+                pointRadius: 0,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'New 3×/wk',
+                data: [],
+                fill: false,
+                tension: 0.1,
+                borderColor: 'rgba(75,192,192,1)',
+                borderWidth: 1,
+                pointRadius: 0,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'New 2×/wk',
+                data: [],
+                fill: false,
+                tension: 0.1,
+                borderColor: 'rgba(153,102,255,1)',
+                borderWidth: 1,
+                pointRadius: 0,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'APC, Current 3×/wk',
+                data: [],
+                borderColor: 'rgb(232, 173, 96)',
+                borderWidth: 1.5,
+                borderDash: [8, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                hidden: true,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'TAC, Current 3×/wk',
+                data: [],
+                borderColor: 'rgb(232, 173, 96)',
+                borderWidth: 1.5,
+                borderDash: [2, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                hidden: true,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'APC, New 3×/wk',
+                data: [],
+                borderColor: 'rgba(75,192,192,1)',
+                borderWidth: 1.5,
+                borderDash: [8, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                hidden: true,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'TAC, New 3×/wk',
+                data: [],
+                borderColor: 'rgba(75,192,192,1)',
+                borderWidth: 1.5,
+                borderDash: [2, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                hidden: true,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'APC, New 2×/wk',
+                data: [],
+                borderColor: 'rgba(153,102,255,1)',
+                borderWidth: 1.5,
+                borderDash: [8, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                hidden: true,
+                backgroundColor: 'transparent'
+            },
+            {
+                label: 'TAC, New 2×/wk',
+                data: [],
+                borderColor: 'rgba(153,102,255,1)',
+                borderWidth: 1.5,
+                borderDash: [2, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                hidden: true,
+                backgroundColor: 'transparent'
+            }
+        ]
+    };
+
+    const options = {
+        responsive: true,
+        layout: { padding: 0 },
+        plugins: {
+            title: {
+                display: true,
+                text: 'PUN Levels Throughout Week',
+                font: { size: 26 },
+                color: '#000'
+            },
+            legend: { display: false }
+        },
+        scales: {
+            x: {
+                grid: { color: '#ddd' },
+                ticks: {
+                    callback: (value) => dayOrder[Math.floor(value / 1440)],
+                    values: [0, 1440, 2880, 4320, 5760, 7200, 8640],
+                    maxTicksLimit: 7
+                },
+                min: 0,
+                max: 10080
+            },
+            y: {
+                display: true,
+                title: {
+                    display: true,
+                    text: 'PUN (mg/dL)',
+                    font: { weight: 'bold' },
+                    color: '#000'
+                },
+                beginAtZero: true,
+                min: 0,
+                max: 100,
+                grid: { color: '#ddd' }
+            }
+        },
+        maintainAspectRatio: true
+    };
+
+    // HTML Legend Plugin
+    const htmlLegendPlugin = {
+        id: 'htmlLegend',
+        afterUpdate(chart) {
+            const legendContainer = document.getElementById('chartLegend');
+            if (!legendContainer) return;
+            const groups = [[], [], []];
+            chart.data.datasets.forEach((ds, i) => {
+                const col = ds.borderColor.startsWith('rgb(232') ? 0
+                    : ds.borderColor.startsWith('rgba(75') ? 1
+                        : 2;
+                groups[col].push({
+                    index: i,
+                    label: ds.label,
+                    color: ds.borderColor,
+                    hidden: chart.isDatasetVisible(i) === false
+                });
+            });
+            legendContainer.innerHTML = groups.map(group =>
+                `<ul>` + group.map(item =>
+                    `<li data-ds-index="${item.index}">
+                        <input type="checkbox" ${item.hidden ? '' : 'checked'} style="margin-right: 5px;">
+                        <span style="background:${item.color};border:1px solid ${item.color}"></span>
+                        ${item.label}
+                    </li>`
+                ).join('') + `</ul>`
+            ).join('');
+        }
+    };
+
+    Chart.defaults.color = '#000';
+    Chart.defaults.font.family = "Inter";
+    Chart.defaults.backgroundColor = 'transparent';
+    Chart.defaults.borderColor = '#ddd';
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: emptyData,
+        options: options,
+        plugins: [htmlLegendPlugin]
+    });
+
+    // Click handler for legend
+    document.getElementById('chartLegend').onclick = function (e) {
+        const li = e.target.closest('li[data-ds-index]');
+        if (!li) return;
+        const idx = +li.dataset.dsIndex;
+        chart.setDatasetVisibility(idx, !chart.isDatasetVisible(idx));
+        chart.update();
+    };
+
+    return chart;
+}
+
 /* first-load setup */
 toggleFields();
 checkInputs();
@@ -315,16 +627,8 @@ checkHeightWarning();
 checkAgeWarning();
 checkWeightWarning();
 calculateVolumeOfPatient();  // Ensure volume display is blank on page load
+checkCalcStdKtVInputs();  // Ensure calculate button is initially disabled
 
-/* ─────────── INITIAL CALC + CHART ─────────── */
-// Commented out since inputs now have no default values
-// User must fill in values and click Calculate & Plot
-// (function initialRender() {
-//     // run all calculations with the default values already in the form
-//     calculateVolumeOfPatient();
-//     calculateTwice();
-//     calculateThrice();
-//
-//     // build the first chart and keep its reference
-//     activeChart = drawGraph();
-// })();
+/* ─────────── INITIAL EMPTY CHART ─────────── */
+// Create empty chart on page load
+activeChart = createEmptyChart();
