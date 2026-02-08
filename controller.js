@@ -443,7 +443,7 @@ function createEmptyChart() {
             title: {
                 display: true,
                 text: 'PUN Levels Throughout Week',
-                font: { size: 20 },
+                font: { size: 24 },
                 color: '#000',
                 padding: {
                     top: 2,
