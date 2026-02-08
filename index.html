@@ -40,45 +40,27 @@
       <h2>Parameters for Current 3x per Week Dialysis</h2>
 
       <div class="input-question">
-        <b>Do you have an estimate of the urea distribution volume?</b><br>
+        <label>Gender at birth:</label><br>
         <div class="radio-group">
-          <label><input type="radio" name="isestimate" value="yes"> Yes</label>
-          <label><input type="radio" name="isestimate" value="no" checked> No</label>
+          <label><input type="radio" name="gender" value="male" checked> Male</label>
+          <label><input type="radio" name="gender" value="female"> Female</label>
         </div>
       </div>
 
-      <!-- urea Vd : manual or auto-calculated -->
-      <div id="volume-input" style="display:none">
-        <div class="input-question">
-          <label for="ureaDistribution">Urea volume of distribution:</label><br>
-          <div><input type="number" id="ureaDistribution" class="numeric-input" step="any"><span> L</span></div>
+      <div class="input-question">
+        <label for="height">Height:</label><br>
+        <div style="display: flex; align-items: center; flex-wrap: wrap;"><input type="number" id="height"
+            class="numeric-input" min="100" required><span style="margin-left: 5px;"> cm</span><span
+            id="height-warning" style="color: red; margin-left: 10px; display: none;">Value outside normal range,
+            under 100 cm?</span>
         </div>
       </div>
 
-      <div id="gender-height-age">
-        <div class="input-question">
-          <label>Gender at birth:</label><br>
-          <div class="radio-group">
-            <label><input type="radio" name="gender" value="male" checked> Male</label>
-            <label><input type="radio" name="gender" value="female"> Female</label>
-          </div>
-        </div>
-
-        <div class="input-question">
-          <label for="height">Height:</label><br>
-          <div style="display: flex; align-items: center; flex-wrap: wrap;"><input type="number" id="height"
-              class="numeric-input" min="100" required><span style="margin-left: 5px;"> cm</span><span
-              id="height-warning" style="color: red; margin-left: 10px; display: none;">Value outside normal range,
-              under 100 cm?</span>
-          </div>
-        </div>
-
-        <div class="input-question">
-          <label for="age">Age:</label><br>
-          <div style="display: flex; align-items: center; flex-wrap: wrap;"><input type="number" id="age"
-              class="numeric-input" required><span style="margin-left: 5px;"> yrs</span><span id="age-warning"
-              style="color: red; margin-left: 10px; display: none;">Value outside normal range, age under 18?</span>
-          </div>
+      <div class="input-question">
+        <label for="age">Age:</label><br>
+        <div style="display: flex; align-items: center; flex-wrap: wrap;"><input type="number" id="age"
+            class="numeric-input" required><span style="margin-left: 5px;"> yrs</span><span id="age-warning"
+            style="color: red; margin-left: 10px; display: none;">Value outside normal range, age under 18?</span>
         </div>
       </div>
 
@@ -90,11 +72,9 @@
         </div>
       </div>
 
-      <div id="volume-display">
-        <div class="input-question">
-          <label>Calculated urea volume of distribution:</label><br>
-          <div><input readonly id="ureaDisplay" class="numeric-input"><span> L</span></div>
-        </div>
+      <div class="input-question">
+        <label>Calculated urea volume of distribution:</label><br>
+        <div><input readonly id="ureaDisplay" class="numeric-input"><span> L</span></div>
       </div>
 
       <div class="input-question"><label>Dialysis time:</label><br>
@@ -134,17 +114,17 @@
     <div class="right-column-wrapper">
       <!-- ========= RESULTS / CHART =========================================== -->
       <div class="box output-box">
-        <h2 class="results-title">Results</h2><br>
+        <h2 class="results-title">Results</h2>
 
         <div class="graph"><canvas id="myLineChart"></canvas></div>
 
         <div class="output-column">
-          <div style="text-align:center;margin-bottom:1rem;">
-            <p style="margin:0;"><b>Estimated dialytic clearance (Kd):</b> <span id="kdOutput"></span></p>
+          <div style="text-align:center;margin:0;padding:0;">
+            <p style="margin:0;padding:0;"><b>Estimated dialytic clearance (Kd):</b> <span id="kdOutput"></span></p>
           </div>
 
-          <div class="custom-legend-container">
-            <div id="legendSubtitle" style="text-align:center;font-weight:bold;margin-bottom:0.5rem;">Check/uncheck to
+          <div class="custom-legend-container" style="margin:0;padding-top:0.0625rem;">
+            <div id="legendSubtitle" style="text-align:center;font-weight:bold;margin:0;padding:0.0625rem 0;">Check/uncheck to
               show/hide lines</div>
             <div id="chartLegend"></div>
           </div>
@@ -168,53 +148,6 @@
           <p id="UF_WarningTwice"></p>
         </div>
 
-      </div>
-
-      <!-- ========= CALCULATE STDKT/V BOX ================================= -->
-      <div class="box calculate-stdktv-box">
-        <h2 class="results-title">Calculate New stdKt/V</h2>
-
-        <div class="calc-inputs-grid">
-          <!-- Column 1 -->
-          <div class="input-question">
-            <label for="calc_ureaVolume">Urea volume of distribution:</label><br>
-            <div><input type="number" id="calc_ureaVolume" class="numeric-input" step="any" required><span> L</span>
-            </div>
-          </div>
-
-          <div class="input-question">
-            <label for="calc_dialysisTime">New dialysis time:</label><br>
-            <div><input type="number" id="calc_dialysisTime" class="numeric-input" step="any" required><span> min</span>
-            </div>
-          </div>
-
-          <!-- Column 2 -->
-          <div class="input-question">
-            <label for="calc_spKtV">New spKt/V:</label><br>
-            <div><input type="number" id="calc_spKtV" class="numeric-input" step="any" required></div>
-          </div>
-
-          <div class="input-question">
-            <label for="calc_weeklyUF">New weekly UF rate:</label><br>
-            <div><input type="number" id="calc_weeklyUF" class="numeric-input" step="any" required><span> L/wk</span>
-            </div>
-          </div>
-
-          <!-- Column 3 -->
-          <div class="input-question">
-            <label for="calc_treatmentsPerWeek">Number of treatments per week:</label><br>
-            <div><input type="number" id="calc_treatmentsPerWeek" class="numeric-input" step="any" required></div>
-          </div>
-
-          <div class="calc-button-wrapper">
-            <button id="calculateStdKtV" type="button" disabled>Calculate stdKt/V</button>
-          </div>
-        </div>
-
-        <div class="calc-output">
-          <span class="output-label">New stdKt/V:</span>
-          <span id="newStdKtVOutput" class="output-value"></span>
-        </div>
       </div>
     </div>
   </div>

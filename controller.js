@@ -1,44 +1,34 @@
 /* controller.js  ─ ES-module that coordinates UI, calculations & chart */
 // Dynamic import to avoid circular dependency with graph.js
 
-/* ─────────── UI VISIBILITY + VALIDATION ─────────── */
-function toggleFields() {
-    const isEstimate = document.querySelector('input[name="isestimate"]:checked').value === 'yes';
-    const volInput = document.getElementById('volume-input');
-    const volDisplay = document.getElementById('volume-display');
-    const ghaGroup = document.getElementById('gender-height-age');
-
-    // required flags
-    const req = (el, on) => (on ? el.setAttribute('required', '') : el.removeAttribute('required'));
-
-    if (isEstimate) {
-        volInput.style.display = 'block';
-        volDisplay.style.display = 'none';
-        ghaGroup.style.display = 'none';
-
-        req(document.getElementById('ureaDistribution'), true);
-        req(document.getElementById('age'), false);
-        req(document.getElementById('height'), false);
-        req(document.getElementById('weight'), true);
-        document.querySelectorAll('input[name="gender"]').forEach(i => req(i, false));
-    } else {
-        volInput.style.display = 'none';
-        volDisplay.style.display = 'block';
-        ghaGroup.style.display = 'block';
-
-        req(document.getElementById('ureaDistribution'), false);
-        req(document.getElementById('age'), true);
-        req(document.getElementById('height'), true);
-        req(document.getElementById('weight'), true);
-        document.querySelectorAll('input[name="gender"]').forEach(i => req(i, true));
-    }
-    checkInputs();
-    calculateVolumeOfPatient();  // Update volume display when toggling
-}
-
+/* ─────────── UI VALIDATION ─────────── */
 function checkInputs() {
-    const allFilled = [...document.querySelectorAll('input[required]')].every(i => i.value);
-    document.getElementById('calculate').disabled = !allFilled;
+    const requiredInputs = [...document.querySelectorAll('input[required]')];
+    
+    // Group radio buttons by name
+    const radioGroups = {};
+    const otherInputs = [];
+    
+    requiredInputs.forEach(input => {
+        if (input.type === 'radio') {
+            if (!radioGroups[input.name]) {
+                radioGroups[input.name] = [];
+            }
+            radioGroups[input.name].push(input);
+        } else {
+            otherInputs.push(input);
+        }
+    });
+    
+    // Check if all non-radio inputs have values
+    const allOthersFilled = otherInputs.every(i => i.value && i.value.trim() !== '');
+    
+    // Check if at least one radio in each required group is checked
+    const allRadioGroupsChecked = Object.values(radioGroups).every(group => 
+        group.some(radio => radio.checked)
+    );
+    
+    document.getElementById('calculate').disabled = !(allOthersFilled && allRadioGroupsChecked);
 }
 
 /* ─────────── GENERIC HELPERS (exported so graph.js can import them) ─────────── */
@@ -48,29 +38,23 @@ export const getNumberValue = (id) => {
 };
 
 export function calculateVolumeOfPatient() {
-    const isEstimate = document.querySelector('input[name="isestimate"]:checked').value === 'yes';
     let volume = 0;
     const ureaDisplay = document.getElementById('ureaDisplay');
+    const age = getNumberValue('age');
+    const height = getNumberValue('height');
+    const weight = getNumberValue('weight');
+    const gender = document.querySelector('input[name="gender"]:checked')?.value;
 
-    if (isEstimate) {
-        volume = getNumberValue('ureaDistribution');
+    // Check if all required inputs are filled
+    if (age > 0 && height > 0 && weight > 0 && gender) {
+        volume = gender === 'male'
+            ? 2.447 - 0.09156 * age + 0.1074 * height + 0.3362 * weight
+            : -2.097 + 0.1069 * height + 0.2466 * weight;
+        volume *= 0.9;
+        ureaDisplay.value = volume.toFixed(2);
     } else {
-        const age = getNumberValue('age');
-        const height = getNumberValue('height');
-        const weight = getNumberValue('weight');
-        const gender = document.querySelector('input[name="gender"]:checked')?.value;
-
-        // Check if all required inputs are filled
-        if (age > 0 && height > 0 && weight > 0 && gender) {
-            volume = gender === 'male'
-                ? 2.447 - 0.09156 * age + 0.1074 * height + 0.3362 * weight
-                : -2.097 + 0.1069 * height + 0.2466 * weight;
-            volume *= 0.9;
-            ureaDisplay.value = volume.toFixed(2);
-        } else {
-            // If inputs are not filled, keep the display blank
-            ureaDisplay.value = '';
-        }
+        // If inputs are not filled, keep the display blank
+        ureaDisplay.value = '';
     }
     return volume;
 }
@@ -232,7 +216,6 @@ export function calculateThrice() {
 
 /* ─────────── INITIAL UI BINDINGS ─────────── */
 document.querySelectorAll('input').forEach(i => i.addEventListener('input', checkInputs));
-document.querySelectorAll('input[name="isestimate"]').forEach(i => i.addEventListener('change', toggleFields));
 
 /* ─────────── MAIN SUBMIT HANDLER (re-draw chart each time) ─────────── */
 const form = document.getElementById('dialysisForm');
@@ -337,79 +320,6 @@ const genderInputs = document.querySelectorAll('input[name="gender"]');
 genderInputs.forEach(input => {
     input.addEventListener('change', calculateVolumeOfPatient);
 });
-
-/* ─────────── CALCULATE STDKT/V BUTTON VALIDATION ─────────── */
-function checkCalcStdKtVInputs() {
-    const calcButton = document.getElementById('calculateStdKtV');
-    if (!calcButton) return;
-
-    const calcInputs = [
-        'calc_ureaVolume',
-        'calc_dialysisTime',
-        'calc_spKtV',
-        'calc_weeklyUF',
-        'calc_treatmentsPerWeek'
-    ];
-
-    const allFilled = calcInputs.every(id => {
-        const input = document.getElementById(id);
-        return input && input.value && input.value.trim() !== '';
-    });
-
-    calcButton.disabled = !allFilled;
-}
-
-// Add event listeners to all Calculate stdKt/V inputs
-const calcInputIds = ['calc_ureaVolume', 'calc_dialysisTime', 'calc_spKtV', 'calc_weeklyUF', 'calc_treatmentsPerWeek'];
-calcInputIds.forEach(id => {
-    const input = document.getElementById(id);
-    if (input) {
-        input.addEventListener('input', checkCalcStdKtVInputs);
-    }
-});
-
-/* ─────────── CALCULATE STDKT/V BUTTON HANDLER ─────────── */
-function calculateNewStdKtV() {
-    // Get input values
-    const spKtV = parseFloat(document.getElementById('calc_spKtV').value);
-    const time = parseFloat(document.getElementById('calc_dialysisTime').value);
-    const ureaVolume = parseFloat(document.getElementById('calc_ureaVolume').value);
-    const weeklyuf = parseFloat(document.getElementById('calc_weeklyUF').value);
-    const treatmentsPerWeek = parseFloat(document.getElementById('calc_treatmentsPerWeek').value);
-
-    // Calculate ektv_prime = spktv * (time) / (time + 30)
-    const ektv_prime = spKtV * (time) / (time + 30);
-    const a = 1 - Math.exp(-ektv_prime);
-
-    // Calculate UF_factor
-    const UF_factor = 1 / (1 - (0.74 * weeklyuf) / (treatmentsPerWeek * ureaVolume));
-
-    // Get kru from the main form
-    const kru = parseFloat(document.getElementById('kru').value) || 0;
-
-    // Calculate KruAdd
-    const KruAdd = (10080 * kru) / (ureaVolume * 1000);
-
-    // Calculate stdKtV_Leypoldt
-    const stdKtV_Leypoldt = (10080 * a / time) / (a / ektv_prime + (10080 / (treatmentsPerWeek * time)) - 1);
-
-    // Calculate stdKtV_trial
-    const stdKtV_trial = UF_factor * stdKtV_Leypoldt + KruAdd;
-
-    // Display the result
-    const outputElement = document.getElementById('newStdKtVOutput');
-    if (outputElement) {
-        outputElement.textContent = stdKtV_trial.toFixed(2);
-    }
-
-    return stdKtV_trial;
-}
-
-// Add event listener to the calculate button
-const calculateStdKtVButton = document.getElementById('calculateStdKtV');
-if (calculateStdKtVButton) {
-    calculateStdKtVButton.addEventListener('click', calculateNewStdKtV);
-}
 
 /* ─────────── INITIAL EMPTY CHART ─────────── */
 function createEmptyChart() {
@@ -528,13 +438,17 @@ function createEmptyChart() {
 
     const options = {
         responsive: true,
-        layout: { padding: 0 },
+        layout: { padding: { top: 0, bottom: 0, left: 0, right: 0 } },
         plugins: {
             title: {
                 display: true,
                 text: 'PUN Levels Throughout Week',
-                font: { size: 26 },
-                color: '#000'
+                font: { size: 20 },
+                color: '#000',
+                padding: {
+                    top: 2,
+                    bottom: 2
+                }
             },
             legend: { display: false }
         },
@@ -621,13 +535,11 @@ function createEmptyChart() {
 }
 
 /* first-load setup */
-toggleFields();
 checkInputs();
 checkHeightWarning();
 checkAgeWarning();
 checkWeightWarning();
 calculateVolumeOfPatient();  // Ensure volume display is blank on page load
-checkCalcStdKtVInputs();  // Ensure calculate button is initially disabled
 
 /* ─────────── INITIAL EMPTY CHART ─────────── */
 // Create empty chart on page load
