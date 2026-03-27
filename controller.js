@@ -28,7 +28,14 @@ function checkInputs() {
         group.some(radio => radio.checked)
     );
     
-    document.getElementById('calculate').disabled = !(allOthersFilled && allRadioGroupsChecked);
+    const allRequiredFilled = allOthersFilled && allRadioGroupsChecked;
+    const calculateButton = document.getElementById('calculate');
+    const inputMissingMessage = document.getElementById('inputMissingMessage');
+
+    calculateButton.disabled = !allRequiredFilled;
+    if (inputMissingMessage) {
+        inputMissingMessage.style.display = allRequiredFilled ? 'none' : 'inline';
+    }
 }
 
 /* ─────────── GENERIC HELPERS (exported so graph.js can import them) ─────────── */
